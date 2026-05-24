@@ -410,6 +410,7 @@ class confirmDelete2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      
       title: const Text("Confirm delete"),
       content: const Text(
         "Are you sure you want to delete all completed tasks? It cannot be undone😓",
@@ -419,7 +420,7 @@ class confirmDelete2 extends StatelessWidget {
           onPressed: () {
             for (var task in tasks) {
               if (task.is_Completed == true) {
-                context.read<ProviderClass>().deleteTask(task);
+                context.read<ProviderClass>().removeCompletes();
                 Navigator.pop(context);
               }
             }

@@ -45,6 +45,13 @@ class ProviderClass extends ChangeNotifier {
     notifyListeners();
   }
 
+    Future<void> removeCompletes() async {
+        _tasks.removeWhere((e) => e.is_Completed);
+        notifyListeners();
+      await FileManager().writeJsonFile(_tasks, "data", "tasks");
+    }
+  
+
   Future<void> removeFromQueue(Task task) async {
     _queue.remove(task.id);
     print("ur done yay");
