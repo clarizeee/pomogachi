@@ -1,0 +1,423 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'models.dart';
+
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
+import 'dart:async';
+
+class ProviderClass extends ChangeNotifier {
+
+  List _tasks = [];
+  List _habits = [];  
+  List _queue = [];  
+
+  List get tasks => _tasks;
+  List get habits => _habits;
+  List get queue => _queue;
+  List get parentTasks =>
+      _tasks.where((t) => t.subtasks.isNotEmpty).toList();
+
+  Future<void> getTasks() async {    
+    List list = await FileManager().readJsonFile("data", "tasks");
+    _tasks = list.map((e) => Task.fromMap(e)).toList();    
+    print("ur done yay");
+    notifyListeners();
+  }
+
+  Future<void> getQueue() async {
+    List _queue = await FileManager().readJsonFile("data", "queue");
+    print("ur done yay");
+    notifyListeners();
+  }
+
+  Future<void> addToQueue(Task task) async {
+    if (_queue.contains(task.id)) {
+      return;
+    }
+    _queue.add(task.id);
+    print("ur done yay");
+    notifyListeners();
+  }
+
+  Future<void> removeFromQueue(Task task) async {
+    _queue.remove(task.id);
+    print("ur done yay");
+    notifyListeners();
+  }
+
+  Future<void> editTask(Task task) async {
+    final index = _tasks.indexWhere((e) => e.id == task.id);
+    _tasks[index] = _tasks[index].copyWith(
+    id: task.id,
+    name: task.name,
+    category: task.category,
+    deadline: task.deadline,
+    subtasks: task.subtasks,
+    is_Completed: task.is_Completed, 
+    is_Standalone: task.is_Standalone,    
+    );
+    //TODO: write on json file
+    await FileManager().writeJsonFile(_tasks, "data", "tasks");
+    notifyListeners();
+  }
+
+  Future<void> toggleComplete(Task task) async {
+    final index = _tasks.indexWhere((e) => e.id == task.id);
+
+    final newValue = !_tasks[index].is_Completed;
+
+    _tasks[index] = _tasks[index].copyWith(
+      is_Completed: newValue,
+    );
+    if (task.subtasks.isEmpty) {
+      await FileManager().writeJsonFile(_tasks, "data", "tasks");
+      notifyListeners();
+      return;
+    }
+
+    final subtasks = task.subtasks;
+
+    for (var id in subtasks) {
+      final subindex = _tasks.indexWhere((e) => e.id == id);
+       if (subindex == -1) continue;
+        _tasks[subindex] = _tasks[subindex].copyWith(
+            is_Completed: newValue,
+          );
+    }
+    await FileManager().writeJsonFile(_tasks, "data", "tasks");
+    notifyListeners();
+  }
+
+
+
+  Future<void>addTask(Task task) async {
+    _tasks.add(task);
+    print("Ok added na cya boss");
+    print(task);
+    await FileManager().writeJsonFile(_tasks, "data", "tasks");
+    notifyListeners();
+  }
+
+  Future<void> addSubTask(Task parent_task, Task child_task) async {
+    final parent_index = _tasks.indexWhere((e) => e.id == parent_task.id);
+
+    final updatedParent = _tasks[parent_index];
+
+    final updatedSubtasks = [...updatedParent.subtasks, child_task.id];
+
+    _tasks[parent_index] = updatedParent.copyWith(is_Standalone: false, subtasks: updatedSubtasks,);
+
+   await addTask(child_task);
+
+    
+  }
+
+  Future<void> deleteTask(Task task) async {
+    print("Delete trigger");
+    if (_queue.contains(task.id)) {
+      removeFromQueue(task);
+    }
+    final index = _tasks.indexWhere((e) => e.id == task.id);
+    _tasks.remove(_tasks[index]);
+    await FileManager().writeJsonFile(_tasks, "data", "tasks");
+    
+    notifyListeners();
+  }
+
+  Future<void> updateQueue(int oldIndex, int newIndex) async {
+  if (newIndex > oldIndex) {
+      newIndex--;
+    }
+
+    final int id = _queue.removeAt(oldIndex);
+    _queue.insert(newIndex, id);
+    notifyListeners();
+  }
+}
+
+class FileManager {
+  FileManager._internal();
+
+  static final FileManager _instance = FileManager._internal();
+
+  factory FileManager() =>
+      _instance; // u call it as FileManager().<method here>
+
+  Future<String> get _directoryPath async {
+    Directory directory = await getApplicationDocumentsDirectory();
+    return directory.path;
+  }
+
+  Future<File> get _file async {
+    final path = await _directoryPath;
+    return File('$path/cheetah.txt');
+  }
+
+  Future<File> get_jsonFile(String fileName) async {
+    final path = await _directoryPath;
+    print("path found!!!");
+    return File('$path/$fileName.json');
+  }
+
+  
+Future<List<dynamic>> readJsonFile(String fileName, String category) async {
+    File file = await get_jsonFile(fileName);
+
+    if (!await file.exists()) {
+      try {
+        final assetContent = await rootBundle.loadString('data/$fileName.json');
+        await file.writeAsString(assetContent);
+      } catch (e) {
+        print("Asset load failed: $e");
+        return [];
+      }
+    }
+
+    try {
+      String content = await file.readAsString();
+
+      if (content.isEmpty) return [];
+
+      final decoded = json.decode(content);
+
+      if (decoded is Map<String, dynamic>) {
+        final data = decoded[category];
+
+        if (data is List) {
+          return data;
+        }
+      }
+
+      return [];
+    } catch (e) {
+      print("JSON error: $e");
+      return [];
+    }
+  }
+
+/*   Future<List<dynamic>> readJsonFile(String fileName, String category) async {
+    try {
+      final String content = await rootBundle.loadString('data/$fileName.json');
+
+      final Map<String, dynamic> data = json.decode(content);
+
+      final result = data[category];
+
+      if (result is List) {
+        return result;
+      }
+
+      return [];
+    } catch (e) {
+      print("Failed to load asset JSON: $e");
+      return [];
+    }
+  } */
+
+  Future<void> writeJsonFile(
+    List tasksList,
+    String dest,
+    String category,
+  ) async {
+    File file = await get_jsonFile(dest);
+    await file.writeAsString(
+
+      json.encode({category: tasksList.map((h) => h.toJson()).toList()}),
+      flush: true,
+    );
+    print("Reached here!");
+    //return Tasks;
+  }
+
+  Future<File> get _imageFile async {
+    final path = await _directoryPath;
+    return File('$path/cheetah_image');
+  }
+
+  Future<String> readTextFile() async {
+    String fileContent = 'blaaaank';
+
+    File file = await _file;
+
+    if (await file.exists()) {
+      try {
+        fileContent = await file.readAsString();
+      } catch (e) {
+        print(e);
+      }
+    }
+
+    return fileContent;
+  }
+
+  Future<String> writeTextFile() async {
+    String text = DateFormat('h:mm:ss').format(DateTime.now());
+
+    File file = await _file;
+    await file.writeAsString(text);
+    return text;
+  }
+
+  Future<Uint8List> writeImageFile() async {
+    Response response = await Client().get(
+      Uri.parse(
+        'https://i.pinimg.com/originals/f5/1d/08/f51d08be05919290355ac004cdd5c2d6.png',
+      ),
+    );
+
+    Uint8List bytes = response.bodyBytes;
+    File file = await _imageFile;
+    await file.writeAsBytes(bytes);
+
+    print(file.path);
+    print(bytes);
+
+    return bytes;
+  }
+
+  Future<Uint8List?> readImageFile() async {
+    File file = await _imageFile;
+    Uint8List byteList;
+
+    if (await file.exists()) {
+      try {
+        byteList = await file.readAsBytes();
+        return byteList;
+      } catch (e) {
+        print(e);
+      }
+    }
+
+    return null;
+  }
+
+  deleteImage() async {
+    File file = await _imageFile;
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
+}
+
+class TimerProvider extends ChangeNotifier {
+  Timer? _timer;
+
+  int _start = 1500;
+  int _initial = 1500;
+  bool _isRunning = false;
+
+  int get start => _start;
+  int get initial => _initial;
+  bool get isRunning => _isRunning;
+  PomodoroMode _mode = workMode;
+
+  PomodoroMode get mode => _mode;
+
+  
+  void setTimer(int seconds) {
+    _timer?.cancel();
+    _start = seconds;
+    _initial = seconds;
+    notifyListeners();
+  }
+
+  Task? _currentTask;
+
+  Task? get currentTask => _currentTask;
+
+  void setMode(PomodoroMode mode) {
+    clearTask();
+    _timer?.cancel();
+
+    _mode = mode;
+    _start = mode.duration;
+    _initial = mode.duration;
+    _isRunning = false;
+
+    startTimer();
+
+    notifyListeners();
+  }
+
+  void changeTask(Task task) {
+    _currentTask = task;
+    resetTimer();
+    notifyListeners();
+  }
+
+  void clearTask() {
+    _currentTask = null;
+    notifyListeners();
+  }
+
+  void startTimer() {
+    if (_isRunning) return;
+
+    _isRunning = true;
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_start <= 0) {
+        timer.cancel();
+        _finishTimer();
+        notifyListeners();
+        return;
+      }
+
+      _start--;
+      notifyListeners();
+    });
+  }
+
+  void _finishTimer() {
+    _timer?.cancel();
+
+    _isRunning = false;
+    setMode(_mode == workMode ? restMode : workMode);
+    // optional:
+    //_currentTask = null;
+
+    notifyListeners();
+  }
+
+  void pauseTimer() {
+    _timer?.cancel();
+    _isRunning = false;
+    notifyListeners();
+  }
+
+  void resetTimer() {
+      _timer?.cancel();
+      //clearTask();
+      _start = _mode.duration;
+      _initial = _mode.duration;
+      _isRunning = false;
+      notifyListeners();
+    }
+  }
+
+
+
+
+
+
+
+
+//TODO: u modify them here. im so sorry for the janky architecture................
+
+
+
+const workMode = PomodoroMode(name: "Work", duration: 1500, image: "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyMTQ2Y25oc21tb2wyeTI0ZGtkaWlmdXA1aDR0eTRwdWl5a3dza2tidyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/toXKzaJP3WIgM/source.gif");
+
+const restMode = PomodoroMode(name: "Rest", duration: 300, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROui2HODVVb1PnCLDhhTjNN2FwLzf6H7TwVA&s");
+
+const longBreakMode = PomodoroMode(
+  name: "Long Break",
+  duration: 900,
+  image: "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyd3ZkZ3ZpdjB3aHp1ajd6YXNwMDJnb3Nja280anFyd2N3Z2VqbW5sdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mkhMTALnrYRLnuoe5P/200.gif",
+);

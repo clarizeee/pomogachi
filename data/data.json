@@ -1,0 +1,106 @@
+{
+    "tasks": [
+        {
+            "id": 1,
+            "name": "Finish Flutter UI",
+            "category": "Development",
+            "deadline": "2026-05-24",
+            "subtasks": [
+                2,
+                7
+            ],
+            "is_Completed": false,
+            "is_Standalone": false
+        },
+        {
+            "id": 2,
+            "name": "Design Homepage",
+            "category": "Development",
+            "deadline": "2026-05-23",
+            "subtasks": [
+                3
+            ],
+            "is_Completed": true,
+            "is_Standalone": false
+        },
+        {
+            "id": 3,
+            "name": "Create Navbar",
+            "category": "Development",
+            "deadline": "2026-05-23",
+            "subtasks": [],
+            "is_Completed": true,
+            "is_Standalone": false
+        },
+        {
+            "id": 4,
+            "name": "Study Database Design",
+            "category": "Education",
+            "deadline": "2026-05-25",
+            "subtasks": [
+                5,
+                6
+            ],
+            "is_Completed": false,
+            "is_Standalone": false
+        },
+        {
+            "id": 5,
+            "name": "Read Normalization Notes",
+            "category": "Education",
+            "deadline": "2026-05-24",
+            "subtasks": [],
+            "is_Completed": false,
+            "is_Standalone": false
+        },
+        {
+            "id": 6,
+            "name": "Practice ER Diagrams",
+            "category": "Education",
+            "deadline": "2026-05-24",
+            "subtasks": [],
+            "is_Completed": false,
+            "is_Standalone": false
+        },
+        {
+            "id": 7,
+            "name": "Fix Responsive Layout",
+            "category": "Development",
+            "deadline": "2026-05-24",
+            "subtasks": [],
+            "is_Completed": false,
+            "is_Standalone": false
+        },
+        {
+            "id": 8,
+            "name": "Workout Routine",
+            "category": "Health",
+            "deadline": "2026-05-23",
+            "subtasks": [
+                9,
+                10
+            ],
+            "is_Completed": false,
+            "is_Standalone": false
+        },
+        {
+            "id": 9,
+            "name": "30 Minute Cardio",
+            "category": "Health",
+            "deadline": "2026-05-23",
+            "subtasks": [],
+            "is_Completed": true,
+            "is_Standalone": false
+        },
+        {
+            "id": 10,
+            "name": "Stretching",
+            "category": "Health",
+            "deadline": "2026-05-23",
+            "subtasks": [],
+            "is_Completed": false,
+            "is_Standalone": false
+        }
+    ],
+    "queue" : []
+}
