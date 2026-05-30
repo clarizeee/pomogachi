@@ -400,8 +400,9 @@ class TimerProvider extends ChangeNotifier {
   }
 
   void changeTask(Task task) {
-    _currentTask = task;
     setMode(workMode);
+    _currentTask = task;
+    
     // resetTimer();
     notifyListeners();
   }
@@ -479,21 +480,21 @@ const workMode = PomodoroMode(
   name: "Work",
   duration: 1500,
   image:
-      "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyMTQ2Y25oc21tb2wyeTI0ZGtkaWlmdXA1aDR0eTRwdWl5a3dza2tidyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/toXKzaJP3WIgM/source.gif",
+      "assets/work.gif",
 );
 
 const restMode = PomodoroMode(
   name: "Rest",
   duration: 300,
   image:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROui2HODVVb1PnCLDhhTjNN2FwLzf6H7TwVA&s",
+      "assets/rest.gif",
 );
 
 const longBreakMode = PomodoroMode(
   name: "Long Break",
   duration: 900,
   image:
-      "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyd3ZkZ3ZpdjB3aHp1ajd6YXNwMDJnb3Nja280anFyd2N3Z2VqbW5sdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mkhMTALnrYRLnuoe5P/200.gif",
+      "assets/longbreak.gif",
 );
 
 class PomodoroController {

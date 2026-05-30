@@ -30,4 +30,5 @@ flutter:
   assets:
     - data/data.json
     - data/queue.json
+    - assets/
     - data/pomodoros.json

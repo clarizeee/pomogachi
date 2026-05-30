@@ -56,7 +56,7 @@ class _MyTimerWidgetState extends State<MyTimerWidget> {
             percent: timer.start / timer.initial, // dynamic progress
             center: CircleAvatar(
               radius: 100-10,
-              backgroundImage: NetworkImage(timer.isRunning == true ? timer.mode.image : "https://media.tenor.com/h2TRPv-yfBQAAAAM/gayixiangs.gif"), //TODO : "idle image" the else here is actually the "idle" phase. its also hardcoded im so so sorry
+              backgroundImage: AssetImage(timer.isRunning == true ? timer.mode.image : "assets/idle.gif"), //TODO : "idle image" the else here is actually the "idle" phase. its also hardcoded im so so sorry
             ),
             progressColor: Theme.of(context).colorScheme.primary,
           ),
