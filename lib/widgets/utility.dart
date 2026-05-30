@@ -107,7 +107,7 @@ class _MyTimerWidgetState extends State<MyTimerWidget> {
             showDialog(
               context: context,
               builder: (_) => const PomodoroSettingsDialog(
-                modes: [],
+                modes: [workMode, restMode, longBreakMode],
               ),
             );
           },
