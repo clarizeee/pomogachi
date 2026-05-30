@@ -3,7 +3,7 @@
         {
             "name": "Work",
             "duration": 1500,
-            "image": "work.gif"
+            "image": "assets/work.gif"
         },
         {
             "name": "Rest",
