@@ -401,6 +401,7 @@ class TimerProvider extends ChangeNotifier {
 
   void changeTask(Task task) {
     _currentTask = task;
+    setMode(workMode);
     // resetTimer();
     notifyListeners();
   }
