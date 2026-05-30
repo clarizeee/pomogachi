@@ -136,7 +136,7 @@ Add to queue''',
       ),     
       child: Container(
         width: double.infinity,
-        height: 90.8,
+        height: 100.8,
         decoration: BoxDecoration(
           color: (widget.parent == true) ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSecondaryContainer,
           borderRadius: BorderRadius.circular(10),
@@ -259,8 +259,9 @@ class _taskTileState2 extends State<taskTile2> {
             // An action can be bigger than the others.
             flex: 2,
             onPressed: (context) {
-              final timer = context.read<TimerProvider>();
-             // timer.setMode(workMode); // ALWAYS start tasks in work mode
+            final timer = context.read<TimerProvider>();
+
+              timer.setMode(timer.workMode);
               timer.changeTask(widget.task);
               timer.startTimer();
             },
@@ -287,7 +288,7 @@ class _taskTileState2 extends State<taskTile2> {
           ),         ]),      
       child: Container(
         width: double.infinity,
-        height: 90.8,
+        height: 100.8,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.onPrimaryContainer,
           borderRadius: BorderRadius.circular(10),

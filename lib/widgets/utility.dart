@@ -42,78 +42,86 @@ class _MyTimerWidgetState extends State<MyTimerWidget> {
   
   Widget build(BuildContext context) {
     final timer = context.watch<TimerProvider>();
-    final pomo = context.watch<TimerProvider>().mode;
-    String modename = pomo.name;
-    return Column(
-      spacing: 10,
-      children: [
-        SizedBox(
-          height: 200,
-          child: CircularPercentIndicator(
-            radius: 100.0,
-            lineWidth: 10.0,
-          
-            percent: timer.start / timer.initial, // dynamic progress
-            center: CircleAvatar(
-              radius: 100-10,
-              backgroundImage: AssetImage(timer.isRunning == true ? timer.mode.image : "assets/idle.gif"), //TODO : "idle image" the else here is actually the "idle" phase. its also hardcoded im so so sorry
-            ),
-            progressColor: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        Text(
-          format(timer.start), style: Theme.of(context).textTheme.headlineLarge
-        ),
-        (timer.isRunning == false) ?
-        Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                spacing: 10,
-          children: [
 
-            ElevatedButton(onPressed: () {
-              context.read<TimerProvider>().startTimer();
-            }, child: const Text("Start Timer")),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<TimerProvider>().clearTask();
-                      context.read<TimerProvider>().resetTimer();
-                    },
-                    child: const Text("Reset Timer")),            
-          ],
-
-        ) : 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          spacing: 10,
-          children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<TimerProvider>().pauseTimer();
-                    },
-                    child: const Text("Pause Timer"),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<TimerProvider>().resetTimer();
-                      
-                    },
-                    child: const Text("Reset Timer"),
-                  )             
-        ],),
-        ElevatedButton(
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (_) => const PomodoroSettingsDialog(
-                modes: [workMode, restMode, longBreakMode],
+    return Consumer<TimerProvider>(
+      builder: (context, timer, child) {
+            //timer.loadPomodoros();
+            final pomo = timer.mode;
+            String modename = pomo.name;
+      return Column(
+        spacing: 10,
+        children: [
+          SizedBox(
+            height: 200,
+            child: CircularPercentIndicator(
+              radius: 100.0,
+              lineWidth: 10.0,
+            
+              percent: timer.start / timer.initial, // dynamic progress
+              center: CircleAvatar(
+                radius: 100-10,
+                backgroundImage: AssetImage(timer.isRunning == true ? timer.mode.image : "assets/idle.gif"), //TODO : "idle image" the else here is actually the "idle" phase. its also hardcoded im so so sorry
               ),
-            );
-          },
-          child: Text(modename),
-        ),
-      ],
+              progressColor: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          Text(
+            format(timer.start), style: Theme.of(context).textTheme.headlineLarge
+          ),
+          (timer.isRunning == false) ?
+          Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  spacing: 10,
+            children: [
+      
+              ElevatedButton(onPressed: () {
+                context.read<TimerProvider>().startTimer();
+              }, child: const Text("Start Timer")),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<TimerProvider>().clearTask();
+                        context.read<TimerProvider>().resetTimer();
+                      },
+                      child: const Text("Reset Timer")),            
+            ],
+      
+          ) : 
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            spacing: 10,
+            children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<TimerProvider>().pauseTimer();
+                      },
+                      child: const Text("Pause Timer"),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<TimerProvider>().resetTimer();
+                        
+                      },
+                      child: const Text("Reset Timer"),
+                    )             
+          ],),
+          ElevatedButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) =>  PomodoroSettingsDialog(
+                  modes: [
+                    for (var i in timer.modes)
+                    i
+                  ],
+                ),
+              );
+            },
+            child: Text(modename),
+          ),
+        ],
+      ); }
     );
   }
 }

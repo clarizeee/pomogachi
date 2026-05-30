@@ -351,15 +351,42 @@ class TimerProvider extends ChangeNotifier {
   int _initial = 1500;
   bool _isRunning = false;
 
-  int get start => _start;
-  int get initial => _initial;
-  bool get isRunning => _isRunning;
   bool _finishing = false;
-  PomodoroMode _mode = workMode;
+
+  Task? _currentTask;
+
+  Task? get currentTask => _currentTask;
+
+  // ---------------------------
+  // POMODORO DATA (NOW LOCAL)
+  // ---------------------------
+
+  List<PomodoroMode> _modes = [];
+
+  List<PomodoroMode> get modes => _modes;
+
+  static const PomodoroMode _fallback = PomodoroMode(
+    name: "Loading",
+    duration: 1500,
+    image: "",
+  );
+
+  PomodoroMode _mode = _fallback;
 
   PomodoroMode get mode => _mode;
 
-  PomodoroController? _controller;
+  PomodoroMode get workMode =>
+      _modes.firstWhere((m) => m.name == "Work", orElse: () => _fallback);
+
+  PomodoroMode get restMode =>
+      _modes.firstWhere((m) => m.name == "Rest", orElse: () => _fallback);
+
+  PomodoroMode get longBreakMode =>
+      _modes.firstWhere((m) => m.name == "Long Break", orElse: () => _fallback);
+
+  // ---------------------------
+  // PROVIDER ATTACHMENT (TASKS ONLY)
+  // ---------------------------
 
   void attachProvider(ProviderClass provider) {
     _provider = provider;
@@ -374,6 +401,29 @@ class TimerProvider extends ChangeNotifier {
       .whereType<Task>()
       .toList();
 
+  // ---------------------------
+  // LOAD POMODOROS FROM JSON
+  // ---------------------------
+
+  Future<void> loadPomodoros() async {
+    final data = await FileManager().readJsonFile("pomodoros", "pomodoros");
+    print(data);
+    _modes = data.map((e) => PomodoroMode.fromMap(e)).toList();
+    print("pomodoro modes are being loaded!");
+    print(_modes);
+    if (_modes.isNotEmpty) {
+      _mode = _modes.first;
+      _start = _mode.duration;
+      _initial = _mode.duration;
+    }
+
+    notifyListeners();
+  }
+
+  // ---------------------------
+  // TIMER CORE
+  // ---------------------------
+
   void setTimer(int seconds) {
     _timer?.cancel();
     _start = seconds;
@@ -381,29 +431,19 @@ class TimerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Task? _currentTask;
-
-  Task? get currentTask => _currentTask;
-
   void setMode(PomodoroMode mode) {
     clearTask();
-    //_timer?.cancel();
 
     _mode = mode;
     _start = mode.duration;
     _initial = mode.duration;
     _isRunning = false;
 
-    //startTimer();
-
     notifyListeners();
   }
 
   void changeTask(Task task) {
-    setMode(workMode);
     _currentTask = task;
-    
-    // resetTimer();
     notifyListeners();
   }
 
@@ -415,7 +455,6 @@ class TimerProvider extends ChangeNotifier {
   }
 
   void startTimer() {
-    print(_mode);
     if (_isRunning) return;
 
     _isRunning = true;
@@ -423,7 +462,6 @@ class TimerProvider extends ChangeNotifier {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_start == 0) {
         timer.cancel();
-        //_finishTimer();
         resetTimer();
         _finishTimer();
         notifyListeners();
@@ -435,26 +473,38 @@ class TimerProvider extends ChangeNotifier {
     });
   }
 
+  // ---------------------------
+  // STATE MACHINE LOGIC
+  // ---------------------------
+
   void _finishTimer() async {
-    if (_finishing) return; // 🔒 prevents spam
+    if (_finishing) return;
     _finishing = true;
 
     _timer?.cancel();
     _isRunning = false;
 
-    if (_mode == workMode) {
-      setMode(restMode);
+    final work = workMode;
+    final rest = restMode;
+
+    if (_mode.name == work.name) {
+      setMode(rest);
     } else {
-      if (_provider!.queue.isNotEmpty) {
-        setMode(workMode);
-        changeTask(queuedTasks[0]);
+      if (_provider?.queue.isNotEmpty ?? false) {
+        setMode(work);
+        changeTask(queuedTasks.first);
+      } else {
+        setMode(work);
       }
     }
 
     _finishing = false;
-
     notifyListeners();
   }
+
+  // ---------------------------
+  // CONTROLS
+  // ---------------------------
 
   void pauseTimer() {
     _timer?.cancel();
@@ -464,38 +514,25 @@ class TimerProvider extends ChangeNotifier {
 
   void resetTimer() {
     _timer?.cancel();
-    //clearTask();
     _start = _mode.duration;
     _initial = _mode.duration;
     _isRunning = false;
     notifyListeners();
   }
+
+  // ---------------------------
+  // GETTERS
+  // ---------------------------
+
+  int get start => _start;
+  int get initial => _initial;
+  bool get isRunning => _isRunning;
 }
 
 //TODO: u modify them here. im so sorry for the janky architecture................
 
 //300
 
-const workMode = PomodoroMode(
-  name: "Work",
-  duration: 1500,
-  image:
-      "assets/work.gif",
-);
-
-const restMode = PomodoroMode(
-  name: "Rest",
-  duration: 300,
-  image:
-      "assets/break.gif",
-);
-
-const longBreakMode = PomodoroMode(
-  name: "Long Break",
-  duration: 900,
-  image:
-      "assets/longbreak.gif",
-);
 
 class PomodoroController {
   final ProviderClass provider;
@@ -511,13 +548,13 @@ class PomodoroController {
     print("on work complete running!");
     if (provider.queue.isEmpty) return;
 
-    timer.setMode(restMode);
+  //  timer.setMode(restMode);
     timer.startTimer();
   }
 
   /// CALL THIS when break finishes
   void onBreakComplete() {
-    timer.setMode(workMode);
+   // timer.setMode(workMode);
     //  timer.startTimer();
 
     _syncNextTask();

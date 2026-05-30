@@ -23,6 +23,7 @@ class _workState extends State<workpage> {
     Future.microtask(() async {
      await context.read<ProviderClass>().getTasks();
      await context.read<ProviderClass>().getQueue();
+     await context.read<TimerProvider>().loadPomodoros();
     });
   }
 
