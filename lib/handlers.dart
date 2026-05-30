@@ -487,7 +487,7 @@ const restMode = PomodoroMode(
   name: "Rest",
   duration: 300,
   image:
-      "assets/rest.gif",
+      "assets/break.gif",
 );
 
 const longBreakMode = PomodoroMode(
