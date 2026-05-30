@@ -8,15 +8,39 @@ import 'styles.dart';
 void main() {
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(
-        create: (_) => ProviderClass(),),
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProviderClass()),
         ChangeNotifierProvider(create: (_) => TimerProvider()),
-        ],
-        child: MainApp()
-      ),
-    
+      ],
+      child: MyAppWrapper(),
+    ),
   );
+}
 
+class MyAppWrapper extends StatefulWidget {
+  const MyAppWrapper({super.key});
+
+  @override
+  State<MyAppWrapper> createState() => _MyAppWrapperState();
+}
+
+class _MyAppWrapperState extends State<MyAppWrapper> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<ProviderClass>();
+      final timer = context.read<TimerProvider>();
+
+      timer.attachProvider(provider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const MainApp();
+  }
 }
 
 class MainApp extends StatelessWidget {
@@ -44,7 +68,7 @@ class NavigatedHomepage extends StatefulWidget {
 }
 
 class _HomePageState extends State<NavigatedHomepage> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 1;
 
   final List<Widget> _pages = [workpage(), homepage()];
 
@@ -61,8 +85,8 @@ class _HomePageState extends State<NavigatedHomepage> {
           });
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Work"),
-          BottomNavigationBarItem(icon: Icon(Icons.event), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.event), label: "Work"),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
         
         ],
       ),

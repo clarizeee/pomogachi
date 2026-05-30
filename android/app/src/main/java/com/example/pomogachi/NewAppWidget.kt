@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.widget.RemoteViews
 
+
 /**
  * Implementation of App Widget functionality.
  * App Widget Configuration implemented in [NewAppWidgetConfigureActivity]
@@ -42,11 +43,11 @@ internal fun updateAppWidget(
     appWidgetManager: AppWidgetManager,
     appWidgetId: Int
 ) {
-    val widgetText = loadTitlePref(context, appWidgetId)
+ //   val widgetText = loadTitlePref(context, appWidgetId)
     // Construct the RemoteViews object
-    val views = RemoteViews(context.packageName, R.layout.new_app_widget)
-    views.setTextViewText(R.id.appwidget_text, widgetText)
+  //  val views = RemoteViews(context.packageName, R.layout.new_app_widget)
+  //  views.setTextViewText(R.id.appwidget_text, widgetText)
 
     // Instruct the widget manager to update the widget
-    appWidgetManager.updateAppWidget(appWidgetId, views)
-}
+   // appWidgetManager.updateAppWidget(appWidgetId, views)
+}//

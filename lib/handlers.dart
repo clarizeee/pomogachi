@@ -12,26 +12,30 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 
 class ProviderClass extends ChangeNotifier {
-
   List _tasks = [];
-  List _habits = [];  
-  List _queue = [];  
+  List _habits = [];
+  List<int> _queue = [];
 
   List get tasks => _tasks;
   List get habits => _habits;
-  List get queue => _queue;
-  List get parentTasks =>
-      _tasks.where((t) => t.subtasks.isNotEmpty).toList();
+  List<int> get queue => _queue;
+  List get parentTasks => _tasks.where((t) => t.subtasks.isNotEmpty).toList();
 
-  Future<void> getTasks() async {    
+  Future<void> writeQueue() async {
+    await FileManager().writeQueue(_queue, "queue");
+    notifyListeners();
+  }
+
+  Future<void> getTasks() async {
     List list = await FileManager().readJsonFile("data", "tasks");
-    _tasks = list.map((e) => Task.fromMap(e)).toList();    
+    _tasks = list.map((e) => Task.fromMap(e)).toList();
     print("ur done yay");
     notifyListeners();
   }
 
   Future<void> getQueue() async {
-    List _queue = await FileManager().readJsonFile("data", "queue");
+    _queue = await FileManager().readQueue("queue");
+    print(_queue);
     print("ur done yay");
     notifyListeners();
   }
@@ -42,32 +46,54 @@ class ProviderClass extends ChangeNotifier {
     }
     _queue.add(task.id);
     print("ur done yay");
-    notifyListeners();
+    await writeQueue();
   }
-
-    Future<void> removeCompletes() async {
-        _tasks.removeWhere((e) => e.is_Completed);
-        notifyListeners();
-      await FileManager().writeJsonFile(_tasks, "data", "tasks");
-    }
-  
 
   Future<void> removeFromQueue(Task task) async {
     _queue.remove(task.id);
+    await writeQueue();
     print("ur done yay");
+
     notifyListeners();
+  }
+
+  Future<void> updateQueue(int oldIndex, int newIndex) async {
+    if (newIndex > oldIndex) {
+      newIndex--;
+    }
+
+    final int id = _queue.removeAt(oldIndex);
+    _queue.insert(newIndex, id);
+    await writeQueue();
+  }
+
+  Future<void> removeCompletes() async {
+    final completedIds = _tasks
+        .where((t) => t.is_Completed)
+        .map((t) => t.id)
+        .toSet();
+
+    // remove from tasks
+    _queue.removeWhere((id) => completedIds.contains(id));
+    _tasks.removeWhere((t) => t.is_Completed);
+
+    // remove from queue (id-based)
+
+    notifyListeners();
+    await writeQueue();
+    await FileManager().writeJsonFile(_tasks, "data", "tasks");
   }
 
   Future<void> editTask(Task task) async {
     final index = _tasks.indexWhere((e) => e.id == task.id);
     _tasks[index] = _tasks[index].copyWith(
-    id: task.id,
-    name: task.name,
-    category: task.category,
-    deadline: task.deadline,
-    subtasks: task.subtasks,
-    is_Completed: task.is_Completed, 
-    is_Standalone: task.is_Standalone,    
+      id: task.id,
+      name: task.name,
+      category: task.category,
+      deadline: task.deadline,
+      subtasks: task.subtasks,
+      is_Completed: task.is_Completed,
+      is_Standalone: task.is_Standalone,
     );
     //TODO: write on json file
     await FileManager().writeJsonFile(_tasks, "data", "tasks");
@@ -79,9 +105,7 @@ class ProviderClass extends ChangeNotifier {
 
     final newValue = !_tasks[index].is_Completed;
 
-    _tasks[index] = _tasks[index].copyWith(
-      is_Completed: newValue,
-    );
+    _tasks[index] = _tasks[index].copyWith(is_Completed: newValue);
     if (task.subtasks.isEmpty) {
       await FileManager().writeJsonFile(_tasks, "data", "tasks");
       notifyListeners();
@@ -92,18 +116,14 @@ class ProviderClass extends ChangeNotifier {
 
     for (var id in subtasks) {
       final subindex = _tasks.indexWhere((e) => e.id == id);
-       if (subindex == -1) continue;
-        _tasks[subindex] = _tasks[subindex].copyWith(
-            is_Completed: newValue,
-          );
+      if (subindex == -1) continue;
+      _tasks[subindex] = _tasks[subindex].copyWith(is_Completed: newValue);
     }
     await FileManager().writeJsonFile(_tasks, "data", "tasks");
     notifyListeners();
   }
 
-
-
-  Future<void>addTask(Task task) async {
+  Future<void> addTask(Task task) async {
     _tasks.add(task);
     print("Ok added na cya boss");
     print(task);
@@ -118,11 +138,12 @@ class ProviderClass extends ChangeNotifier {
 
     final updatedSubtasks = [...updatedParent.subtasks, child_task.id];
 
-    _tasks[parent_index] = updatedParent.copyWith(is_Standalone: false, subtasks: updatedSubtasks,);
+    _tasks[parent_index] = updatedParent.copyWith(
+      is_Standalone: false,
+      subtasks: updatedSubtasks,
+    );
 
-   await addTask(child_task);
-
-    
+    await addTask(child_task);
   }
 
   Future<void> deleteTask(Task task) async {
@@ -133,17 +154,7 @@ class ProviderClass extends ChangeNotifier {
     final index = _tasks.indexWhere((e) => e.id == task.id);
     _tasks.remove(_tasks[index]);
     await FileManager().writeJsonFile(_tasks, "data", "tasks");
-    
-    notifyListeners();
-  }
 
-  Future<void> updateQueue(int oldIndex, int newIndex) async {
-  if (newIndex > oldIndex) {
-      newIndex--;
-    }
-
-    final int id = _queue.removeAt(oldIndex);
-    _queue.insert(newIndex, id);
     notifyListeners();
   }
 }
@@ -172,8 +183,28 @@ class FileManager {
     return File('$path/$fileName.json');
   }
 
-  
-Future<List<dynamic>> readJsonFile(String fileName, String category) async {
+  Future<List<int>> readQueue(String fileName) async {
+    File file = await get_jsonFile(fileName);
+
+    if (!await file.exists()) return [];
+
+    final content = await file.readAsString();
+    final decoded = json.decode(content);
+
+    if (decoded is Map && decoded["queue"] is List) {
+      return (decoded["queue"] as List).map((e) => e as int).toList();
+    }
+
+    return [];
+  }
+
+  Future<void> writeQueue(List<int> queue, String fileName) async {
+    File file = await get_jsonFile(fileName);
+    print("im writing here");
+    await file.writeAsString(json.encode({"queue": queue}), flush: true);
+  }
+
+  Future<List<dynamic>> readJsonFile(String fileName, String category) async {
     File file = await get_jsonFile(fileName);
 
     if (!await file.exists()) {
@@ -208,7 +239,7 @@ Future<List<dynamic>> readJsonFile(String fileName, String category) async {
     }
   }
 
-/*   Future<List<dynamic>> readJsonFile(String fileName, String category) async {
+  /*   Future<List<dynamic>> readJsonFile(String fileName, String category) async {
     try {
       final String content = await rootBundle.loadString('data/$fileName.json');
 
@@ -234,7 +265,6 @@ Future<List<dynamic>> readJsonFile(String fileName, String category) async {
   ) async {
     File file = await get_jsonFile(dest);
     await file.writeAsString(
-
       json.encode({category: tasksList.map((h) => h.toJson()).toList()}),
       flush: true,
     );
@@ -313,6 +343,8 @@ Future<List<dynamic>> readJsonFile(String fileName, String category) async {
 }
 
 class TimerProvider extends ChangeNotifier {
+  ProviderClass? _provider;
+
   Timer? _timer;
 
   int _start = 1500;
@@ -322,11 +354,26 @@ class TimerProvider extends ChangeNotifier {
   int get start => _start;
   int get initial => _initial;
   bool get isRunning => _isRunning;
+  bool _finishing = false;
   PomodoroMode _mode = workMode;
 
   PomodoroMode get mode => _mode;
 
-  
+  PomodoroController? _controller;
+
+  void attachProvider(ProviderClass provider) {
+    _provider = provider;
+  }
+
+  Map<int, Task> get taskMap => {
+    for (var t in _provider?.tasks ?? <Task>[]) t.id: t,
+  };
+
+  List<Task> get queuedTasks => (_provider?.queue ?? [])
+      .map((id) => taskMap[id])
+      .whereType<Task>()
+      .toList();
+
   void setTimer(int seconds) {
     _timer?.cancel();
     _start = seconds;
@@ -340,37 +387,42 @@ class TimerProvider extends ChangeNotifier {
 
   void setMode(PomodoroMode mode) {
     clearTask();
-    _timer?.cancel();
+    //_timer?.cancel();
 
     _mode = mode;
     _start = mode.duration;
     _initial = mode.duration;
     _isRunning = false;
 
-    startTimer();
+    //startTimer();
 
     notifyListeners();
   }
 
   void changeTask(Task task) {
     _currentTask = task;
-    resetTimer();
+    // resetTimer();
     notifyListeners();
   }
 
   void clearTask() {
     _currentTask = null;
+    _finishTimer();
+    resetTimer();
     notifyListeners();
   }
 
   void startTimer() {
+    print(_mode);
     if (_isRunning) return;
 
     _isRunning = true;
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_start <= 0) {
+      if (_start == 0) {
         timer.cancel();
+        //_finishTimer();
+        resetTimer();
         _finishTimer();
         notifyListeners();
         return;
@@ -381,13 +433,23 @@ class TimerProvider extends ChangeNotifier {
     });
   }
 
-  void _finishTimer() {
-    _timer?.cancel();
+  void _finishTimer() async {
+    if (_finishing) return; // 🔒 prevents spam
+    _finishing = true;
 
+    _timer?.cancel();
     _isRunning = false;
-    setMode(_mode == workMode ? restMode : workMode);
-    // optional:
-    //_currentTask = null;
+
+    if (_mode == workMode) {
+      setMode(restMode);
+    } else {
+      if (_provider!.queue.isNotEmpty) {
+        setMode(workMode);
+        changeTask(queuedTasks[0]);
+      }
+    }
+
+    _finishing = false;
 
     notifyListeners();
   }
@@ -399,32 +461,109 @@ class TimerProvider extends ChangeNotifier {
   }
 
   void resetTimer() {
-      _timer?.cancel();
-      //clearTask();
-      _start = _mode.duration;
-      _initial = _mode.duration;
-      _isRunning = false;
-      notifyListeners();
-    }
+    _timer?.cancel();
+    //clearTask();
+    _start = _mode.duration;
+    _initial = _mode.duration;
+    _isRunning = false;
+    notifyListeners();
   }
-
-
-
-
-
-
-
+}
 
 //TODO: u modify them here. im so sorry for the janky architecture................
 
+//300
 
+const workMode = PomodoroMode(
+  name: "Work",
+  duration: 1500,
+  image:
+      "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyMTQ2Y25oc21tb2wyeTI0ZGtkaWlmdXA1aDR0eTRwdWl5a3dza2tidyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/toXKzaJP3WIgM/source.gif",
+);
 
-const workMode = PomodoroMode(name: "Work", duration: 1500, image: "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyMTQ2Y25oc21tb2wyeTI0ZGtkaWlmdXA1aDR0eTRwdWl5a3dza2tidyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/toXKzaJP3WIgM/source.gif");
-
-const restMode = PomodoroMode(name: "Rest", duration: 300, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROui2HODVVb1PnCLDhhTjNN2FwLzf6H7TwVA&s");
+const restMode = PomodoroMode(
+  name: "Rest",
+  duration: 300,
+  image:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROui2HODVVb1PnCLDhhTjNN2FwLzf6H7TwVA&s",
+);
 
 const longBreakMode = PomodoroMode(
   name: "Long Break",
   duration: 900,
-  image: "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyd3ZkZ3ZpdjB3aHp1ajd6YXNwMDJnb3Nja280anFyd2N3Z2VqbW5sdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mkhMTALnrYRLnuoe5P/200.gif",
+  image:
+      "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyd3ZkZ3ZpdjB3aHp1ajd6YXNwMDJnb3Nja280anFyd2N3Z2VqbW5sdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mkhMTALnrYRLnuoe5P/200.gif",
 );
+
+class PomodoroController {
+  final ProviderClass provider;
+  final TimerProvider timer;
+
+  PomodoroController({required this.provider, required this.timer});
+
+  /// CALL THIS when timer finishes work mode
+  Future<void> onWorkComplete() async {
+    if (timer.currentTask == null) {
+      return;
+    }
+    print("on work complete running!");
+    if (provider.queue.isEmpty) return;
+
+    timer.setMode(restMode);
+    timer.startTimer();
+  }
+
+  /// CALL THIS when break finishes
+  void onBreakComplete() {
+    timer.setMode(workMode);
+    //  timer.startTimer();
+
+    _syncNextTask();
+  }
+
+  /// keeps timer task aligned with queue
+  void _syncNextTask() {
+    while (provider.queue.isNotEmpty) {
+      final id = provider.queue.first;
+
+      final task = provider.tasks
+          .where((t) => t.id == id)
+          .cast<Task?>()
+          .firstOrNull;
+
+      if (task == null) {
+        provider.queue.removeAt(0);
+        continue; // safe iteration instead of recursion
+      }
+
+      timer.changeTask(task);
+      timer.startTimer();
+      return;
+    }
+
+    timer.clearTask();
+  }
+
+  /// optional manual advance (skip task)
+  Future<void> skipTask() async {
+    if (provider.queue.isEmpty) return;
+
+    provider.queue.removeAt(0);
+    await provider.writeQueue();
+
+    _syncNextTask();
+  }
+}
+
+class QueueItem {
+  final int taskId;
+  final int modeId;
+
+  QueueItem({required this.taskId, required this.modeId});
+
+  factory QueueItem.fromMap(Map<String, dynamic> map) {
+    return QueueItem(taskId: map['taskId'], modeId: map['modeId']);
+  }
+
+  Map<String, dynamic> toJson() => {"taskId": taskId, "modeId": modeId};
+}

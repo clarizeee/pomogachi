@@ -29,16 +29,26 @@ class _tasklistState extends State<taskList> {
   Widget build(BuildContext context) {
     List subtaskList = widget.tasks.where((element) => widget.task.subtasks.contains(element.id)).toList();
     return Column(
-      spacing: 3,
       children: [
         taskTile(task: widget.task, onCollapse: toggleCollapse, parent: true),
-        (collapsed == false) ? Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 0, 0),
-          child: Column(
-            spacing: 3,
-            children: [for (Task task in subtaskList) taskTile(task: task, onCollapse: toggleCollapse)],
-          ),
-        ) : SizedBox(),
+
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          child: collapsed
+              ? const SizedBox()
+              : Padding(
+                  padding: const EdgeInsets.only(left: 20),
+                  child: Column(
+                    spacing: 5,
+                    children: [
+                       SizedBox(height: 3),
+                      for (Task task in subtaskList)
+                        taskTile(task: task, onCollapse: toggleCollapse),
+                    ],
+                  ),
+                ),
+        ),
         SizedBox(height: 20),
       ],
     );
@@ -154,8 +164,8 @@ Add to queue''',
                     width: 50.0,
                     height: 50.0,
                     decoration: BoxDecoration(
-                      color: Colors.white
-                
+                      color: Colors.white,
+                      borderRadius: .all(Radius.circular(5)),
                     ),
                     child: (widget.task.is_Completed == true) ? Icon(Icons.check) : SizedBox(),
                   ),
@@ -249,10 +259,10 @@ class _taskTileState2 extends State<taskTile2> {
             // An action can be bigger than the others.
             flex: 2,
             onPressed: (context) {
-               context.read<TimerProvider>().setMode(workMode);
-              context.read<TimerProvider>().changeTask(widget.task);
-             
-              context.read<TimerProvider>().startTimer();
+              final timer = context.read<TimerProvider>();
+             // timer.setMode(workMode); // ALWAYS start tasks in work mode
+              timer.changeTask(widget.task);
+              timer.startTimer();
             },
             backgroundColor: Color.fromARGB(255, 230, 191, 210),
             foregroundColor: Colors.white,
@@ -264,6 +274,11 @@ class _taskTileState2 extends State<taskTile2> {
             flex: 2,
             onPressed: (context) {
               context.read<ProviderClass>().removeFromQueue(widget.task);
+              if (context.read<TimerProvider>().currentTask == widget.task) {
+                context.read<TimerProvider>().clearTask();
+                
+              }
+              
             },
             backgroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
             foregroundColor: Colors.white,
@@ -293,12 +308,17 @@ class _taskTileState2 extends State<taskTile2> {
                   highlightColor: Colors.transparent,
                   onTap: () async {
                     context.read<ProviderClass>().toggleComplete(widget.task);
+                    if (context.read<TimerProvider>().currentTask ==
+                        widget.task) {
+                      context.read<TimerProvider>().clearTask();
+                    }
                     context.read<ProviderClass>().removeFromQueue(widget.task);
                   },
                   child: Container(
                     width: 50.0,
                     height: 50.0,
-                    decoration: BoxDecoration(color: Colors.white),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: .all(Radius.circular(5)),
+                    ),
                     child: (widget.task.is_Completed == true)
                         ? Icon(Icons.check)
                         : SizedBox(),
@@ -440,10 +460,10 @@ class confirmDelete2 extends StatelessWidget {
 }
 
 Future<String?> showCreateTaskSheet(BuildContext context) {
-  return showModalBottomSheet<String>(
+  return showDialog<String>(
     context: context,
-    isScrollControlled: true, // important for forms
-    isDismissible: true,
+    //isScrollControlled: true, // important for forms
+   // isDismissible: true,
     builder: (_) => addTask(),
   );
 }
@@ -509,56 +529,61 @@ class _nameState extends State<addTask> {
      List taskLists = context.watch<ProviderClass>().tasks;
     Set<String> category = taskLists.map((e) => e.category.toString()).toSet();
     List<String> newCat = category.toList();  
-    return Padding(padding: EdgeInsetsGeometry.all(20),  
-    child: SizedBox(
-      height: height * 0.35,
-      child: Column(
-        spacing: 5,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text("Create new task"),
-          TextField(
-            controller: nameCont,
-            decoration: InputDecoration(
-              hint: Text('Enter your task name here......')
-            ),
-          ),
+
+    return AlertDialog(
+      title: Text("Create new task"),
+      content: Padding(padding: EdgeInsetsGeometry.fromLTRB(10, 10, 10, MediaQuery.of(context).viewInsets.bottom + 10,
+        ),  
+      child: SingleChildScrollView(
+        child: Column(
+          spacing: 5,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            
             TextField(
-              controller: categoryCont,
-              autofillHints: newCat,
+              controller: nameCont,
               decoration: InputDecoration(
-                hint: Text('Enter your category name here......'),
-                
-              ),
-            ),      
-            OutlinedButton(
-              onPressed: _selectDate,
-              child: Text(
-                newTask.deadline.isEmpty
-                    ? "No deadline picked yet"
-                    : "${newTask.deadline}",
+                hint: Text('Enter your task name here......')
               ),
             ),
-      
-          Expanded(child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              OutlinedButton(onPressed: () {
-                newTask.name = nameCont.text;
-                newTask.deadline = newTask.deadline;
-                newTask.category =  categoryCont.text;
-                context.read<ProviderClass>().addTask(newTask);
-                
-                Navigator.pop(context);
-              }, 
-              child: Text("Submit"))
-            ]
-          ))
-        ],
+              TextField(
+                controller: categoryCont,
+                autofillHints: newCat,
+                decoration: InputDecoration(
+                  hint: Text('Enter your category name here......'),
+                  
+                ),
+              ),      
+              OutlinedButton(
+                onPressed: _selectDate,
+                child: Text(
+                  newTask.deadline.isEmpty
+                      ? "No deadline picked yet"
+                      : "${newTask.deadline}",
+                ),
+              ),
+        
+
+            SizedBox(height:20)
+          ],
+        
+        ),
+      )
       
       ),
-    )
-    
+      actions: [
+      OutlinedButton(
+          onPressed: () {
+            newTask.name = nameCont.text;
+            newTask.deadline = newTask.deadline;
+            newTask.category = categoryCont.text;
+            context.read<ProviderClass>().addTask(newTask);
+
+            Navigator.pop(context);
+          },
+          child: Text("Submit"),
+        ),
+      ],
     );
   }
 }
@@ -568,10 +593,10 @@ class _nameState extends State<addTask> {
 ///
 ///
 Future<String?> showCreateSubTaskSheet(BuildContext context, Task parentTask) {
-  return showModalBottomSheet<String>(
+  return showDialog<String>(
     context: context,
-    isScrollControlled: true, // important for forms
-    isDismissible: true,
+    //isScrollControlled: true, // important for forms
+  //  isDismissible: true,
     builder: (_) => addSubTask(parent: parentTask,),
   );
 }
@@ -626,48 +651,56 @@ class _addSubtaskstate extends State<addSubTask> {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
 
-    return Padding(padding: EdgeInsetsGeometry.all(20),  
-    child: SizedBox(
-      height: height * 0.25,
-      child: Column(
-        spacing: 5,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text("Create new subtask"),
-          TextField(
-            controller: nameCont,
-            decoration: InputDecoration(
-              hint: Text('Enter your task name here......')
-            ),
-          ),
-      
-          
-      
-          OutlinedButton(
-            onPressed: _selectDate,
-            child: Text(
-                newTask.deadline.isEmpty
-                    ? "No deadline picked yet"
-                    : "${newTask.deadline}",
+    return Padding(padding: EdgeInsetsGeometry.fromLTRB(
+        10,
+        10,
+        10,
+        MediaQuery.of(context).viewInsets.bottom + 10,
+      ),  
+    child: AlertDialog(
+      title: Text("Create new subtask"),
+      content: SingleChildScrollView(
+        child: Column(
+          spacing: 5,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            
+            TextField(
+              controller: nameCont,
+              decoration: InputDecoration(
+                hint: Text('Enter your task name here......')
               ),
-          ),
-      
-          Expanded(child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              OutlinedButton(onPressed: () {
-                newTask.name = nameCont.text;
-                newTask.deadline = newTask.deadline;
-                context.read<ProviderClass>().addSubTask(widget.parent, newTask);
-                
-                Navigator.pop(context);
-              }, 
-              child: Text("Submit"))
-            ]
-          ))
-        ],
-      
+            ),
+        
+            
+        
+            OutlinedButton(
+              onPressed: _selectDate,
+              child: Text(
+                  newTask.deadline.isEmpty
+                      ? "No deadline picked yet"
+                      : "${newTask.deadline}",
+                ),
+            ),
+        
+            
+              SizedBox(height: 20)
+          ],
+        
+        ),
       ),
+      actions: [
+        OutlinedButton(
+            onPressed: () {
+              newTask.name = nameCont.text;
+              newTask.deadline = newTask.deadline;
+              context.read<ProviderClass>().addSubTask(widget.parent, newTask);
+
+              Navigator.pop(context);
+            },
+            child: Text("Submit"),
+          ),
+      ],
     )
     
     );
@@ -677,10 +710,10 @@ class _addSubtaskstate extends State<addSubTask> {
 
 
 Future<String?> showEditSheet(BuildContext context, Task task) {
-  return showModalBottomSheet<String>(
+  return showDialog<String>(
     context: context,
-    isScrollControlled: true, // important for forms
-    isDismissible: true,
+    //isScrollControlled: true, // important for forms
+  //  isDismissible: true,
     builder: (_) => editTask(task: task),
   );
 }
@@ -737,57 +770,63 @@ class _editTaskstate extends State<editTask> {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
 
-    return Padding(
-      padding: EdgeInsetsGeometry.all(20),
-      child: SizedBox(
-        height: height * 0.35,
-        child: Column(
-          spacing: 5,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("Edit current task"),
-            TextField(
-              controller: nameCont,
-              decoration: InputDecoration(
-                hint: Text('Enter your task name here......'),
-              ),
-            ),
-            TextField(
-              controller: categoryCont,
-              decoration: InputDecoration(
-                hint: Text('Enter your category name here......'),
-              ),
-            ),
-            OutlinedButton(
-              onPressed: _selectDate,
-              child: Text(
-                newTask.deadline.isEmpty
-                    ? "No deadline picked yet"
-                    : "${newTask.deadline}",
-              ),
-            ),
-
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  OutlinedButton(
-                    onPressed: () {
-                      newTask.name = nameCont.text;
-                      newTask.deadline = newTask.deadline;
-                      newTask.category = categoryCont.text;
-                      context.read<ProviderClass>().editTask(newTask);
-
-                      Navigator.pop(context);
-                    },
-                    child: Text("Submit"),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    return AlertDialog(
+      title: Text("Edit current task"),
+      content: Padding(
+        padding: EdgeInsetsGeometry.fromLTRB(
+          10,
+          10,
+          10,
+          MediaQuery.of(context).viewInsets.bottom + 10,
         ),
+        child: SingleChildScrollView(
+          child: Column(
+            spacing: 5,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              
+              TextField(
+                controller: nameCont,
+                decoration: InputDecoration(
+                  hint: Text('Enter your task name here......'),
+                ),
+              ),
+              TextField(
+                controller: categoryCont,
+                decoration: InputDecoration(
+                  hint: Text('Enter your category name here......'),
+                ),
+              ),
+              OutlinedButton(
+                onPressed: _selectDate,
+                child: Text(
+                  newTask.deadline.isEmpty
+                      ? "No deadline picked yet"
+                      : "${newTask.deadline}",
+                ),
+              ),
+      
+              
+               SizedBox(height: 20)
+            ],
+          ),
+          
+        ),
+        
       ),
+      actions: [
+        OutlinedButton(
+          onPressed: () {
+            newTask.name = nameCont.text;
+            newTask.deadline = newTask.deadline;
+            newTask.category = categoryCont.text;
+            context.read<ProviderClass>().editTask(newTask);
+
+            Navigator.pop(context);
+          },
+          child: Text("Submit"),
+        ),
+      ],
     );
   }
 }

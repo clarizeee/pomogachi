@@ -97,6 +97,7 @@ class _MyTimerWidgetState extends State<MyTimerWidget> {
                   ElevatedButton(
                     onPressed: () {
                       context.read<TimerProvider>().resetTimer();
+                      
                     },
                     child: const Text("Reset Timer"),
                   )             
@@ -106,7 +107,7 @@ class _MyTimerWidgetState extends State<MyTimerWidget> {
             showDialog(
               context: context,
               builder: (_) => const PomodoroSettingsDialog(
-                modes: [workMode, restMode, longBreakMode],
+                modes: [],
               ),
             );
           },
@@ -136,6 +137,7 @@ class PomodoroSettingsDialog extends StatelessWidget {
             title: Text(mode.name),
             onTap: () {
               timer.setMode(mode);
+              timer.startTimer();
               Navigator.pop(context);
             },
           );

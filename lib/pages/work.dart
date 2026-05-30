@@ -20,9 +20,9 @@ class _workState extends State<workpage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      context.read<ProviderClass>().getTasks();
-      context.read<ProviderClass>().getQueue();
+    Future.microtask(() async {
+     await context.read<ProviderClass>().getTasks();
+     await context.read<ProviderClass>().getQueue();
     });
   }
 
@@ -30,12 +30,16 @@ class _workState extends State<workpage> {
   Widget build(BuildContext context) {
     List taskLists = context.watch<ProviderClass>().tasks;
     List queue = context.watch<ProviderClass>().queue;
-    List tasks = queue
-    .map((id) => taskLists.firstWhere((t) => t.id == id))
-    .toList();
+    
+   // print(queue.first.runtimeType);
+    final taskMap = {for (var t in taskLists) t.id: t};
+
+    final tasks = queue
+        .where((id) => taskMap.containsKey(id))
+        .map((id) => taskMap[id]!)
+        .toList();
     
     Task? task = context.watch<TimerProvider>().currentTask;
-    
 
 
     return Scaffold(
@@ -57,22 +61,37 @@ class _workState extends State<workpage> {
             ),
           )),
             SliverToBoxAdapter(child: SizedBox(height: 10,)),
-            SliverReorderableList(              
-            itemCount: tasks.length,
-            itemBuilder: (context, index) {
-              return Column(
-                key: ValueKey(tasks[index].id),
-                children: [
-                  taskTile2( index: index, task: tasks[index], onCollapse: () {},
+            SliverToBoxAdapter(child: Center(child: Container(child: Text("Queue", style: Theme.of(context).textTheme.titleLarge)))),
+            SliverToBoxAdapter(child: SizedBox(height: 5)),
+            SliverToBoxAdapter(child: Divider()),
+            
+            SliverToBoxAdapter(child: SizedBox(height: 10)),
+            (queue.isNotEmpty) ? 
+            SliverReorderableList(
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                return Column(
+                  key: ValueKey(tasks[index].id),
+                  children: [
+                    taskTile2(
+                      index: index,
+                      task: tasks[index],
+                      onCollapse: () {},
                     ),
-                  SizedBox(height: 10, child: Container(decoration: BoxDecoration(color: Colors.transparent),),)
-                ],
-              );
-            },
-            onReorder: (int oldIndex, int newIndex) {
-              context.read<ProviderClass>().updateQueue(oldIndex, newIndex);
-            },
-                ),
+                    SizedBox(
+                      height: 10,
+                      child: Container(
+                        decoration: BoxDecoration(color: Colors.transparent),
+                      ),
+                    ),
+                  ],
+                );
+              },
+              onReorder: (int oldIndex, int newIndex) {
+                context.read<ProviderClass>().updateQueue(oldIndex, newIndex);
+              },
+            ) : SliverToBoxAdapter(child: Center(child: Container(child: Text("Seems a little empty 😓", style: Theme.of(context).textTheme.bodyMedium,
+                        )))),
           ],
         ),
       )

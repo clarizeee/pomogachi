@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: ^3.9.2
+  sdk: ^3.10.0
 
 dependencies:
   animated_reorderable_list: ^1.3.0
@@ -13,6 +13,7 @@ dependencies:
     sdk: flutter
   flutter_slidable: ^4.0.3
   flutter_slidable_plus: ^0.1.0
+  home_widget: ^0.7.0 
   http: ^1.6.0
   intl: ^0.20.2
   path_provider: ^2.1.5
@@ -28,3 +29,5 @@ flutter:
   uses-material-design: true
   assets:
     - data/data.json
+    - data/queue.json
+    - data/pomodoros.json
